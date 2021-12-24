@@ -1,4 +1,4 @@
-import { initApp } from "./server.js";
+import { initApp } from "./src/server.js";
 
 export async function run() {
   const app = await initApp(process.argv[2]);

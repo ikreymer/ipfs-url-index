@@ -1,6 +1,6 @@
 import ava from "ava";
 import request from "supertest";
-import { initApp } from "../server.js";
+import { initApp } from "../src/server.js";
 
 const test = ava.serial;
 

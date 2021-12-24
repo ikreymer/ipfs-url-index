@@ -1,7 +1,7 @@
 {
   "name": "ipfs-url-index",
   "version": "0.1.0",
-  "main": "index.js",
+  "main": "main.js",
   "type": "module",
   "author": "Ilya Kreymer",
   "license": "MIT",
