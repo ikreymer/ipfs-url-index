@@ -1,0 +1,13 @@
+*.har
+*.warc
+*.warc.gz
+!examples/*.warc
+**/node_modules
+yarn-error.log
+coverage/
+**/local-examples/
+**/.DS_Store
+**/.sass-cache/
+_site/
+dist/
+plugins-*/
