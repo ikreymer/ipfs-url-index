@@ -1,69 +1,15 @@
-import { Readable } from 'stream';
+import { Readable } from "stream";
 import fs from "fs";
 
-import tempy from 'tempy';
-
-import * as codec from '@ipld/dag-cbor'
-import * as Block from 'multiformats/block';
-import * as IPFS from 'ipfs';
-import { sha256 as hasher } from 'multiformats/hashes/sha2'
-import { CID } from 'multiformats';
-import { CarReader, CarWriter } from '@ipld/car';
+import * as codec from "@ipld/dag-cbor";
+import { sha256 as hasher } from "multiformats/hashes/sha2";
+import { CID } from "multiformats";
+import { CarWriter } from "@ipld/car";
 
 
-import * as BTreeMap from 'chunky-trees/map'
-import { bf, simpleCompare as compare } from 'chunky-trees/utils'
-import { nocache, global } from 'chunky-trees/cache'
-
-
-// ============================================================================
-export class MemStorage
-{
-  constructor() {
-    this.storage = {};
-  }
-
-  async get(cid) {
-    const block = this.storage[cid.toString()];
-    //console.log("getting: " + cid);
-
-    if (!block) {
-      throw new Error('Not found');
-    }
-    return block    
-  }
-
-  async put(block) {
-    //console.log("putting: " + block.cid);
-    this.storage[block.cid.toString()] = block;
-  }
-}
-
-
-// ============================================================================
-export class IPFSStorage
-{
-  constructor(ipfs) {
-    this.ipfs = ipfs;
-  }
-
-  async get(cid) {
-    //console.log("getting: " + cid);
-    const res = await this.ipfs.dag.get(cid);
-
-    const value = res.value;
-
-    return Block.encode({value, codec, hasher}); 
-  }
-
-  async put(block) {
-    //console.log("putting: " + block.cid);
-    const res = await this.ipfs.dag.put(block.bytes, {cid: block.cid, storeCodec: "dag-cbor", inputCodec: "dag-cbor"});
-    if (res.toString() !== block.cid.toString()) {
-      throw new Error("put resulted in wrong cid!");
-    }
-  }
-}
+import * as BTreeMap from "chunky-trees/map";
+import { bf, simpleCompare as compare } from "chunky-trees/utils";
+import { nocache } from "chunky-trees/cache";
 
 
 // ============================================================================
@@ -79,7 +25,7 @@ export class URLIndex
     const chunker = bf(3);
     const get = (x) => this.storage.get(x);
 
-    this.createOpts = { get, compare, cache, chunker, codec, hasher };
+    this.btreeOpts = { get, compare, cache, chunker, codec, hasher };
   }
 
   get rootCid() {
@@ -92,14 +38,14 @@ export class URLIndex
   }
 
   async _createTree(list) {
-    for await (const node of BTreeMap.create({ list, ...this.createOpts })) {
+    for await (const node of BTreeMap.create({ list, ...this.btreeOpts })) {
       await this.storage.put(await node.block);
       this.root = node;
     }
   }
 
   async loadExisting(cid) {
-    this.root = await BTreeMap.load({cid, ...this.createOpts});
+    this.root = await BTreeMap.load({cid, ...this.btreeOpts});
   }
 
   async add(key, value) {
@@ -129,80 +75,41 @@ export class URLIndex
     }
 
     switch (matchType) {
-      case "prefix":
-        start = url;
-        end = this.prefixUpperBound(url);
-        break;
+    case "prefix":
+      start = url;
+      end = this.prefixUpperBound(url);
+      break;
  
-      case "exact":
-      default:
-        start = url;
-        end = url + "!";
+    case "exact":
+    default:
+      start = url;
+      end = url + "!";
     }
 
-    //console.log(start, end);
     const res = await this.root.getRangeEntries(start, end);
 
-    //const all = await this.root.getAllEntries();
-    //console.log("all", all);
-
-    //console.log("results", res.result);
-    return res.result.map((entry) => {return {url: entry.key, cid: entry.value.toString()}});
+    return res.result.map((entry) => {return {url: entry.key, cid: entry.value.toString()};});
   }
 
   async serializeToCar(filename) {
     const { writer, out } = await CarWriter.create([this.root.block.cid]);
+    //const { writer, out } = await CarWriter.create(Array.from(this.storage.cids.values()));
+
+    const writable = fs.createWriteStream(filename);
+
+    const p = new Promise(resolve => {
+      writable.once("finish", () => resolve());
+    });
     
-    Readable.from(out).pipe(fs.createWriteStream(filename));
+    Readable.from(out).pipe(writable);
 
-    const cids = (await this.root.getAllEntries()).cids._cids;
-
-    for (const cid of cids) {
+    for (const cid of this.storage.cids) {
       const block = await this.storage.get(cid);
       await writer.put(block);
     }
 
     await writer.close();
-  }
-
-  async serializeToIpfs(ipfs) {
-    const { writer, out } = await CarWriter.create([this.root.block.cid]);
-    
-    const cids = (await this.root.getAllEntries()).cids._cids;
-
-    const p = new Promise(async resolve => {
-      for await (const buff of ipfs.dag.import(out)) {
-        console.log(buff);
-      }
-      console.log("done");
-      resolve();
-    });
-
-    const promises = [];
-
-    for (const cid of cids) {
-      const block = await this.storage.get(cid);
-      promises.push(writer.put(block));
-    }
-
-    await Promise.all(promises);
-    await writer.close();
-
     await p;
   }
 }
-
-export async function verifyUrl(ipfs, cid) {
-  //TODO: verify that the specified cid actually contains the archived URL in the WACZ
-
-  try {
-    const tempfile = tempy.file();
-
-    Readable.from(ipfs.cat(ipfsPath)).pipe(fs.createWriteStream(tempfile));
-  } catch (e) {
-    console.log(e);
-  }
-}
-
-
 

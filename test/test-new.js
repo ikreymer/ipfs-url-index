@@ -1,25 +1,24 @@
+import fs from "fs";
 import ava from "ava";
 import request from "supertest";
+import tempy from "tempy";
+import path from "path";
+
 import { initApp } from "../src/server.js";
+
+import { addNew, queryUrl } from "./helpers.js";
 
 const test = ava.serial;
 
-const app = await initApp();
+let app = null;
 
-function addNew(url, cid) {
-  return request(app)
-  .post("/add")
-  .send({url, cid});
-}
+test.before("init app", async t => {
+  app = await initApp();
+});
 
-function queryUrl(url, matchType="exact") {
-  return request(app)
-  .get("/query")
-  .query({url, matchType});
-}
 
 test("add new url", async t => {
-  const resp = await addNew("https://example.com/", "bafybeiaxprxxauua75jigaf4psndrn33bwf27sbid54gxjjuvpm3utoeqy");
+  const resp = await addNew(app, "https://example.com/", "bafybeiaxprxxauua75jigaf4psndrn33bwf27sbid54gxjjuvpm3utoeqy");
 
   t.is(resp.status, 200);
   t.deepEqual(resp.body, {root: "bafyreicec4ta3hmtggfnstextbhqquznh32bqrmkgp3aycdbku5o4tcbym"});
@@ -27,7 +26,7 @@ test("add new url", async t => {
 
 
 test("add new url 2", async t => {
-  const resp = await addNew("https://www.iana.org/domains/reserved", "bafybeic4ghvtc2lx3ixoeivv6h7rpxn5cl4ygzgafilnhq7jfygyvabski");
+  const resp = await addNew(app, "https://www.iana.org/domains/reserved", "bafybeic4ghvtc2lx3ixoeivv6h7rpxn5cl4ygzgafilnhq7jfygyvabski");
 
   t.is(resp.status, 200);
   t.deepEqual(resp.body, {root: "bafyreiecggjhsa74e2hqhhluxn5v6gxn7wzfn44defthebvqcn45shjwi4"});
@@ -43,7 +42,7 @@ test("invalid request", async t => {
 });
 
 test("add new url 3", async t => {
-  const resp = await addNew("https://www.iana.org/about", "bafybeigd4td4mwvsbkqmogkmkm4fh2djhdyvu75db5mmhlum4j66jina5y");
+  const resp = await addNew(app, "https://www.iana.org/about", "bafybeigd4td4mwvsbkqmogkmkm4fh2djhdyvu75db5mmhlum4j66jina5y");
 
   t.is(resp.status, 200);
   t.deepEqual(resp.body, {root: "bafyreihunzzaivz6qrv7zcjpyasm237stsl4zygq44h5rxxzyl2ih5x7nm"});
@@ -51,7 +50,7 @@ test("add new url 3", async t => {
 
 
 test("search url 1", async t => {
-  const resp = await queryUrl("https://example.com/");
+  const resp = await queryUrl(app, "https://example.com/");
 
   t.is(resp.status, 200);
   t.deepEqual(resp.body, [{"url": "https://example.com/", "cid": "bafybeiaxprxxauua75jigaf4psndrn33bwf27sbid54gxjjuvpm3utoeqy"}]);
@@ -60,7 +59,7 @@ test("search url 1", async t => {
 
 
 test("search url prefix", async t => {
-  const resp = await queryUrl("https://www.iana.org/", "prefix");
+  const resp = await queryUrl(app, "https://www.iana.org/", "prefix");
 
   t.is(resp.status, 200);
   t.deepEqual(resp.body, [
@@ -71,7 +70,7 @@ test("search url prefix", async t => {
 
 
 test("search url not found", async t => {
-  const resp = await queryUrl("https://www.iana.org/");
+  const resp = await queryUrl(app, "https://www.iana.org/");
 
   t.is(resp.status, 404);
   t.deepEqual(resp.body, []);
@@ -79,13 +78,32 @@ test("search url not found", async t => {
 });
 
 test("search url 2", async t => {
-  const resp = await queryUrl("https://www.iana.org/domains/reserved");
+  const resp = await queryUrl(app, "https://www.iana.org/domains/reserved");
 
   t.is(resp.status, 200);
   t.deepEqual(resp.body, [
     {"url": "https://www.iana.org/domains/reserved", "cid": "bafybeic4ghvtc2lx3ixoeivv6h7rpxn5cl4ygzgafilnhq7jfygyvabski"}
   ]);
   
+});
+
+
+test("serialize to car", async t => {
+  const tempfile = tempy.file() + ".car";
+
+  await app.urlIndex.serializeToCar(tempfile);
+
+  const buff = await fs.promises.readFile(tempfile);
+  const expected = await fs.promises.readFile(new URL("fixtures/firstthree.car", import.meta.url));
+  t.true(buff.equals(expected));
+
+  await fs.promises.unlink(tempfile);
+
+});
+
+
+test.after('cleanup', async t => {
+  await app.urlIndex.storage.ipfs.stop();
 });
 
 
