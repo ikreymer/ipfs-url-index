@@ -10,4 +10,4 @@ Run `node main.js` to start the api server on port 3000.
 
 ### Tests
 
-Run `ava test/test.js` to run test suite.
+Run `ava` or `yarn test` to run the test suite. (The test suite currently must be run sequentially).

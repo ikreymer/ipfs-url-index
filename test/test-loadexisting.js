@@ -63,3 +63,9 @@ test("search url 2", async t => {
   
 });
 
+
+test("ensure no new local cids", async t => {
+  t.is(app.urlIndex.storage.cids.size, 0);
+});
+
+
