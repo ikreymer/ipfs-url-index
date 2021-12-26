@@ -25,7 +25,6 @@ test("search url 1", async t => {
 });
 
 
-/*
 test("search url 2", async t => {
   const resp = await queryUrl(app, "https://www.iana.org/numbers");
 
@@ -33,7 +32,7 @@ test("search url 2", async t => {
   t.deepEqual(resp.body, [{"url": "https://www.iana.org/numbers", "cid": "bafybeihexm67tnjw6ahuhx56ulumtcuonkc2m6erw2ynhny7c7iagshfjm"}]);
   
 });
-*/
+
 
 test("ensure no new local cids", async t => {
   t.is(app.urlIndex.storage.cids.size, 0);

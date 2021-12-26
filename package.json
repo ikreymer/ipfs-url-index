@@ -30,6 +30,7 @@
       "test/test-loadexisting.js",
       "test/test-remote.js"
     ],
+    "timeout": "3m",
     "serial": true,
     "verbose": true
   }
