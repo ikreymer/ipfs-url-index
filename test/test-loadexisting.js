@@ -1,13 +1,7 @@
 import fs from "fs";
 import ava from "ava";
-import request from "supertest";
-import tempy from "tempy";
-import path from "path";
-import { CID } from "multiformats";
 
-import { initApp } from "../src/server.js";
-
-import { addNew, queryUrl, initHttpIpfs } from "./helpers.js";
+import { queryUrl, initHttpIpfs } from "./helpers.js";
 
 const test = ava.serial;
 
@@ -15,7 +9,7 @@ const test = ava.serial;
 let app;
 let ipfs;
 
-test.before("start ipfs http api", async t => {
+test.before("start ipfs http api", async () => {
   const result = await initHttpIpfs();
   ipfs = result.ipfs;
   app = result.app;

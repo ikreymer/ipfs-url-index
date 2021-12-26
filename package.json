@@ -15,17 +15,20 @@
   },
   "devDependencies": {
     "ava": "^3.15.0",
+    "eslint-plugin-ejs": "^0.0.2",
     "ipfs-http-server": "^0.10.0",
     "supertest": "^6.1.6"
   },
   "scripts": {
-    "test": "ava"
+    "test": "ava",
+    "lint": "eslint ./src/* ./test/*.js"
   },
   "ava": {
     "files": [
       "test/test-new.js",
       "test/test-append.js",
-      "test/test-loadexisting.js"
+      "test/test-loadexisting.js",
+      "test/test-remote.js"
     ],
     "serial": true,
     "verbose": true

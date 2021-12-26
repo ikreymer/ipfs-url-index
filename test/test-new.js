@@ -2,7 +2,6 @@ import fs from "fs";
 import ava from "ava";
 import request from "supertest";
 import tempy from "tempy";
-import path from "path";
 
 import { initApp } from "../src/server.js";
 
@@ -12,7 +11,7 @@ const test = ava.serial;
 
 let app = null;
 
-test.before("init app", async t => {
+test.before("init app", async() => {
   app = await initApp();
 });
 
@@ -34,8 +33,8 @@ test("add new url 2", async t => {
 
 test("invalid request", async t => {
   const resp = await request(app)
-  .post("/add")
-  .send({"url2": "https://www.iana.org/domains/reserved", "cid": "bafybeic4ghvtc2lx3ixoeivv6h7rpxn5cl4ygzgafilnhq7jfygyvabski"});
+    .post("/add")
+    .send({"url2": "https://www.iana.org/domains/reserved", "cid": "bafybeic4ghvtc2lx3ixoeivv6h7rpxn5cl4ygzgafilnhq7jfygyvabski"});
 
   t.is(resp.status, 400);
   t.deepEqual(resp.body, {error: "missing cid or url"});
@@ -102,7 +101,7 @@ test("serialize to car", async t => {
 });
 
 
-test.after('cleanup', async t => {
+test.after("cleanup", async () => {
   await app.urlIndex.storage.ipfs.stop();
 });
 

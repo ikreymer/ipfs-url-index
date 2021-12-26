@@ -1,9 +1,6 @@
 import fs from "fs";
 import ava from "ava";
-import request from "supertest";
 import tempy from "tempy";
-
-import { CID } from "multiformats";
 
 import { initApp } from "../src/server.js";
 
@@ -13,7 +10,7 @@ const test = ava.serial;
 
 let app = null;
 
-test.before("init app", async t => {
+test.before("init app", async () => {
   app = await initApp({readOnly: true, createNew: false});
 });
 
@@ -72,8 +69,8 @@ test("check only new cids added", async t => {
   
   t.is(cidStrs.length, 2);
   t.deepEqual(cidStrs, [
-    'bafyreiaf5q334s4ocopshi2344zjiigguo6m5euehzgzx5kxnvdifnaxfy',
-    'bafyreiaiio33thu63mlixl6drdnadpjqrbxhpn4qwmsr3d7jgxto5zc2eu'
+    "bafyreiaf5q334s4ocopshi2344zjiigguo6m5euehzgzx5kxnvdifnaxfy",
+    "bafyreiaiio33thu63mlixl6drdnadpjqrbxhpn4qwmsr3d7jgxto5zc2eu"
   ]);
 
 });
