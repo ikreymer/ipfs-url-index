@@ -62,4 +62,9 @@ test("ensure no new local cids", async t => {
   t.is(app.urlIndex.storage.cids.size, 0);
 });
 
+test.after("cleanup", async () => {
+  await ipfs.stop();
+});
+
+
 

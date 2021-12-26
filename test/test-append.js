@@ -93,7 +93,9 @@ test("serialize to car", async t => {
   await fs.promises.unlink(tempfile);
 });
 
-
+test.after("cleanup", async () => {
+  await app.urlIndex.storage.ipfs.stop();
+});
 
 
 
