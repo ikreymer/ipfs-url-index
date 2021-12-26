@@ -23,7 +23,7 @@ test("load from car", async t => {
 
   let cid;
 
-  for await (const result of ipfs.dag.import(fs.createReadStream(new URL("fixtures/firstthree.car", import.meta.url)))) {
+  for await (const result of ipfs.dag.import(fs.createReadStream(new URL("fixtures/first-three.car", import.meta.url)))) {
     cid = result.root.cid;
     t.is(cid.toString(), "bafyreihunzzaivz6qrv7zcjpyasm237stsl4zygq44h5rxxzyl2ih5x7nm");
   }

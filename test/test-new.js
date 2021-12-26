@@ -94,7 +94,7 @@ test("serialize to car", async t => {
   await app.urlIndex.serializeToCar(tempfile);
 
   const buff = await fs.promises.readFile(tempfile);
-  const expected = await fs.promises.readFile(new URL("fixtures/firstthree.car", import.meta.url));
+  const expected = await fs.promises.readFile(new URL("fixtures/first-three.car", import.meta.url));
   t.true(buff.equals(expected));
 
   await fs.promises.unlink(tempfile);
