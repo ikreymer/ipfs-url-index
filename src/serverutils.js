@@ -12,9 +12,8 @@ export async function loadWACZ(cid) {
   const tempfile = tempy.file();
   const file = fs.createWriteStream(tempfile);
   const p = new Promise((resolve, reject) => {
-    http
-      //.get(`https://dweb.link/ipfs/${cid}/webarchive.wacz`, (resp) => {
-      .get(`http://127.0.0.1:48084/ipfs/${cid}/webarchive.wacz`, (resp) => {
+    https
+      .get(`https://dweb.link/ipfs/${cid}/webarchive.wacz`, (resp) => {
         resp.pipe(file);
         resp.on("end", () => resolve());
       })
