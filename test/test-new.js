@@ -5,107 +5,123 @@ import tempy from "tempy";
 
 import { initApp } from "../src/server.js";
 
-import { addNew, queryUrl } from "./helpers.js";
+import { serializeToCar } from "../src/serverutils.js";
+
+import {
+  addNew,
+  queryUrl,
+  EXAMPLE_CID,
+  IANA_CID_1,
+  IANA_CID_2,
+  ROOT_0,
+  ROOT_1,
+  ROOT_2,
+} from "./helpers.js";
 
 const test = ava.serial;
 
 let app = null;
 
-test.before("init app", async() => {
+test.before("init app", async () => {
   app = await initApp();
 });
 
-
-test("add new url", async t => {
-  const resp = await addNew(app, "https://example.com/", "bafybeiaxprxxauua75jigaf4psndrn33bwf27sbid54gxjjuvpm3utoeqy");
-
-  t.is(resp.status, 200);
-  t.deepEqual(resp.body, {root: "bafyreicec4ta3hmtggfnstextbhqquznh32bqrmkgp3aycdbku5o4tcbym"});
-});
-
-
-test("add new url 2", async t => {
-  const resp = await addNew(app, "https://www.iana.org/domains/reserved", "bafybeic4ghvtc2lx3ixoeivv6h7rpxn5cl4ygzgafilnhq7jfygyvabski");
+test("add new url", async (t) => {
+  const resp = await addNew(app, EXAMPLE_CID);
 
   t.is(resp.status, 200);
-  t.deepEqual(resp.body, {root: "bafyreiecggjhsa74e2hqhhluxn5v6gxn7wzfn44defthebvqcn45shjwi4"});
+  t.deepEqual(resp.body, { root: ROOT_0 });
 });
 
-test("invalid request", async t => {
+test("add new url 2", async (t) => {
+  const resp = await addNew(app, IANA_CID_1);
+
+  t.is(resp.status, 200);
+  t.deepEqual(resp.body, { root: ROOT_1 });
+});
+
+test("invalid request", async (t) => {
   const resp = await request(app)
     .post("/add")
-    .send({"url2": "https://www.iana.org/domains/reserved", "cid": "bafybeic4ghvtc2lx3ixoeivv6h7rpxn5cl4ygzgafilnhq7jfygyvabski"});
+    .send({ cid: "QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D" });
 
   t.is(resp.status, 400);
-  t.deepEqual(resp.body, {error: "missing cid or url"});
+  t.deepEqual(resp.body, { error: "missing cid or url" });
 });
 
-test("add new url 3", async t => {
-  const resp = await addNew(app, "https://www.iana.org/about", "bafybeigd4td4mwvsbkqmogkmkm4fh2djhdyvu75db5mmhlum4j66jina5y");
+test("add new url 3", async (t) => {
+  const resp = await addNew(app, IANA_CID_2);
 
   t.is(resp.status, 200);
-  t.deepEqual(resp.body, {root: "bafyreihunzzaivz6qrv7zcjpyasm237stsl4zygq44h5rxxzyl2ih5x7nm"});
+  t.deepEqual(resp.body, { root: ROOT_2 });
 });
 
-
-test("search url 1", async t => {
+test("search url 1", async (t) => {
   const resp = await queryUrl(app, "https://example.com/");
 
   t.is(resp.status, 200);
-  t.deepEqual(resp.body, [{"url": "https://example.com/", "cid": "bafybeiaxprxxauua75jigaf4psndrn33bwf27sbid54gxjjuvpm3utoeqy"}]);
-  
+  t.deepEqual(resp.body, [
+    {
+      key: "com,example)/ 2021-12-24T00:52:26.820Z",
+      cid: EXAMPLE_CID,
+      url: "https://example.com/",
+    },
+  ]);
 });
 
-
-test("search url prefix", async t => {
+test("search url prefix", async (t) => {
   const resp = await queryUrl(app, "https://www.iana.org/", "prefix");
 
   t.is(resp.status, 200);
   t.deepEqual(resp.body, [
-    {"url": "https://www.iana.org/about", "cid": "bafybeigd4td4mwvsbkqmogkmkm4fh2djhdyvu75db5mmhlum4j66jina5y"},
-    {"url": "https://www.iana.org/domains/reserved", "cid": "bafybeic4ghvtc2lx3ixoeivv6h7rpxn5cl4ygzgafilnhq7jfygyvabski"}
-  ]); 
+    {
+      key: "org,iana)/about 2021-12-24T17:58:44.696Z",
+      url: "https://www.iana.org/about",
+      cid: IANA_CID_2,
+    },
+    {
+      key: "org,iana)/domains/reserved 2021-12-24T01:37:07.748Z",
+      url: "https://www.iana.org/domains/reserved",
+      cid: IANA_CID_1,
+    },
+  ]);
 });
 
-
-test("search url not found", async t => {
+test("search url not found", async (t) => {
   const resp = await queryUrl(app, "https://www.iana.org/");
 
   t.is(resp.status, 404);
   t.deepEqual(resp.body, []);
-  
 });
 
-test("search url 2", async t => {
+test("search url 2", async (t) => {
   const resp = await queryUrl(app, "https://www.iana.org/domains/reserved");
 
   t.is(resp.status, 200);
   t.deepEqual(resp.body, [
-    {"url": "https://www.iana.org/domains/reserved", "cid": "bafybeic4ghvtc2lx3ixoeivv6h7rpxn5cl4ygzgafilnhq7jfygyvabski"}
+    {
+      key: "org,iana)/domains/reserved 2021-12-24T01:37:07.748Z",
+      url: "https://www.iana.org/domains/reserved",
+      cid: IANA_CID_1,
+    },
   ]);
-  
 });
 
-
-test("serialize to car", async t => {
+test("serialize to car", async (t) => {
   const tempfile = tempy.file() + ".car";
+  //const tempfile = "first-three.car";
 
-  await app.urlIndex.serializeToCar(tempfile);
+  await serializeToCar(tempfile, app.urlIndex);
 
   const buff = await fs.promises.readFile(tempfile);
-  const expected = await fs.promises.readFile(new URL("fixtures/first-three.car", import.meta.url));
+  const expected = await fs.promises.readFile(
+    new URL("fixtures/first-three.car", import.meta.url)
+  );
   t.true(buff.equals(expected));
 
   await fs.promises.unlink(tempfile);
-
 });
-
 
 test.after("cleanup", async () => {
   await app.urlIndex.storage.ipfs.stop();
 });
-
-
-
-
-

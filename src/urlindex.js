@@ -1,20 +1,16 @@
-import { Readable } from "stream";
-import fs from "fs";
+//import { Readable } from "stream";
+//import fs from "fs";
 
 import * as codec from "@ipld/dag-cbor";
 import { sha256 as hasher } from "multiformats/hashes/sha2";
-import { CID } from "multiformats";
-import { CarWriter } from "@ipld/car";
-
+//import { CID } from "multiformats";
 
 import * as BTreeMap from "chunky-trees/map";
 import { bf, simpleCompare as compare } from "chunky-trees/utils";
 import { nocache } from "chunky-trees/cache";
 
-
 // ============================================================================
-export class URLIndex
-{
+export class URLIndex {
   constructor(storage) {
     this.root = null;
 
@@ -33,7 +29,7 @@ export class URLIndex
   }
 
   async createNew(info) {
-    await this._createTree([{key: "@root", value: JSON.stringify(info)}]);
+    await this._createTree([{ key: "@info", value: info }]);
     return this.rootCid;
   }
 
@@ -45,28 +41,44 @@ export class URLIndex
   }
 
   async loadExisting(cid) {
-    this.root = await BTreeMap.load({cid, ...this.btreeOpts});
+    this.root = await BTreeMap.load({ cid, ...this.btreeOpts });
   }
 
-  async add(key, value) {
-    if (typeof(value) === "string") {
-      value = CID.parse(value);
+  async add({ url, ts, cid, title = "" } = {}) {
+    if (!cid || !url || !ts) {
+      throw new Error("cid, url, ts must be provided");
     }
-    await this._insertTree([{key, value}]);
+
+    const key = getSurt(url) + " " + ts;
+
+    const value = { url, cid };
+    if (title) {
+      value.title = title;
+    }
+
+    const res = await this.root.getRangeEntries(key, key + "!");
+    if (res && res.result.length) {
+      console.log("already added!");
+      return this.rootCid;
+    }
+
+    await this._insertTree([{ key, value }]);
     return this.rootCid;
   }
 
   async _insertTree(bulk) {
     const newtree = await this.root.bulk(bulk);
-    await Promise.all(newtree.blocks.map(block => this.storage.put(block)));
+    await Promise.all(newtree.blocks.map((block) => this.storage.put(block)));
     this.root = newtree.root;
   }
 
   prefixUpperBound(url) {
-    return url.slice(0, -1) + String.fromCharCode(url.charCodeAt(url.length - 1) + 1);
+    return (
+      url.slice(0, -1) + String.fromCharCode(url.charCodeAt(url.length - 1) + 1)
+    );
   }
 
-  async query({url, matchType = "exact"} = {}) {
+  async query({ url, matchType = "exact"} = {}) {
     let start;
     let end;
 
@@ -75,41 +87,56 @@ export class URLIndex
     }
 
     switch (matchType) {
-    case "prefix":
-      start = url;
-      end = this.prefixUpperBound(url);
-      break;
- 
-    case "exact":
-    default:
-      start = url;
-      end = url + "!";
+      case "raw-prefix":
+        start = url;
+        end = this.prefixUpperBound(start);
+        break;
+
+      case "all":
+        start = "";
+        end = "zzz";
+        break;
+
+      case "prefix":
+        start = getSurt(url);
+        end = this.prefixUpperBound(start);
+        break;
+
+      case "exact":
+      default:
+        start = getSurt(url);
+        end = start + "!";
     }
 
     const res = await this.root.getRangeEntries(start, end);
 
-    return res.result.map((entry) => {return {url: entry.key, cid: entry.value.toString()};});
-  }
-
-  async serializeToCar(filename) {
-    const { writer, out } = await CarWriter.create([this.root.block.cid]);
-    //const { writer, out } = await CarWriter.create(Array.from(this.storage.cids.values()));
-
-    const writable = fs.createWriteStream(filename);
-
-    const p = new Promise(resolve => {
-      writable.once("finish", () => resolve());
+    return res.result.map((entry) => {
+      return { key: entry.key, ...entry.value };
     });
-    
-    Readable.from(out).pipe(writable);
-
-    for (const cid of this.storage.cids) {
-      const block = await this.storage.get(cid);
-      await writer.put(block);
-    }
-
-    await writer.close();
-    await p;
   }
 }
 
+export function getSurt(url) {
+  try {
+    if (!url.startsWith("https:") && !url.startsWith("http:")) {
+      return url;
+    }
+    url = url.replace(/^(https?:\/\/)www\d*\./, "$1");
+    const urlObj = new URL(url.toLowerCase());
+
+    const hostParts = urlObj.hostname.split(".").reverse();
+    let surt = hostParts.join(",");
+    if (urlObj.port) {
+      surt += ":" + urlObj.port;
+    }
+    surt += ")";
+    surt += urlObj.pathname;
+    if (urlObj.search) {
+      urlObj.searchParams.sort();
+      surt += urlObj.search;
+    }
+    return surt;
+  } catch (e) {
+    return url;
+  }
+}

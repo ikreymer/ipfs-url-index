@@ -2,10 +2,8 @@ import * as Block from "multiformats/block";
 import * as codec from "@ipld/dag-cbor";
 import { sha256 as hasher } from "multiformats/hashes/sha2";
 
-
 // ============================================================================
-export class BaseStorage
-{
+export class BaseStorage {
   constructor() {
     this._cids = new Set();
     this._existing = new Set();
@@ -28,10 +26,8 @@ export class BaseStorage
   }
 }
 
-
 // ============================================================================
-export class MemStorage extends BaseStorage
-{
+export class MemStorage extends BaseStorage {
   constructor() {
     super();
     this.storage = {};
@@ -44,7 +40,7 @@ export class MemStorage extends BaseStorage
     if (!block) {
       throw new Error("Not found");
     }
-    return block;    
+    return block;
   }
 
   async put(block) {
@@ -54,10 +50,8 @@ export class MemStorage extends BaseStorage
   }
 }
 
-
 // ============================================================================
-export class IPFSStorage extends BaseStorage
-{
+export class IPFSStorage extends BaseStorage {
   constructor(ipfs) {
     super();
     this.ipfs = ipfs;
@@ -71,12 +65,16 @@ export class IPFSStorage extends BaseStorage
 
     const value = res.value;
 
-    return Block.encode({value, codec, hasher}); 
+    return Block.encode({ value, codec, hasher });
   }
 
   async put(block) {
     console.log("putting: " + block.cid);
-    const res = await this.ipfs.dag.put(block.bytes, {cid: block.cid, storeCodec: "dag-cbor", inputCodec: "dag-cbor"});
+    const res = await this.ipfs.dag.put(block.bytes, {
+      cid: block.cid,
+      storeCodec: "dag-cbor",
+      inputCodec: "dag-cbor",
+    });
     if (res.toString() !== block.cid.toString()) {
       throw new Error("put resulted in wrong cid!");
     }
@@ -84,10 +82,8 @@ export class IPFSStorage extends BaseStorage
   }
 }
 
-
 // ============================================================================
-export class IPFSReadOnlyStorage extends BaseStorage
-{
+export class IPFSReadOnlyStorage extends BaseStorage {
   constructor(ipfs) {
     super();
     this.ipfsStore = new IPFSStorage(ipfs);
