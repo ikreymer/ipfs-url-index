@@ -1,26 +1,19 @@
-import https from "https";
-import http from "http";
 import fs from "fs";
 import { Readable } from "stream";
+import { pipeline } from "stream/promises";
 import tempy from "tempy";
 
 import StreamZip from "node-stream-zip";
 import { CarWriter } from "@ipld/car";
 
 // ===========================================================================
-export async function loadWACZ(cid) {
+export async function loadWACZ(ipfs, cid) {
   const tempfile = tempy.file();
   const file = fs.createWriteStream(tempfile);
-  const p = new Promise((resolve, reject) => {
-    https
-      .get(`https://dweb.link/ipfs/${cid}/webarchive.wacz`, (resp) => {
-        resp.pipe(file);
-        resp.on("end", () => resolve());
-      })
-      .on("error", (e) => reject(e));
-  });
 
-  await p;
+  const catiter = ipfs.cat(cid + "/webarchive.wacz");
+
+  await pipeline(catiter, file);
 
   let text;
 
@@ -55,8 +48,8 @@ export async function loadWACZ(cid) {
 }
 
 // ===========================================================================
-export async function processCID(cid, urlIndex) {
-  const results = await loadWACZ(cid);
+export async function processCID(ipfs, cid, urlIndex) {
+  const results = await loadWACZ(ipfs, cid);
 
   let root;
 
@@ -90,5 +83,3 @@ export async function serializeToCar(filename, urlIndex) {
   await writer.close();
   await p;
 }
-
-//loadWACZ("bafybeigd4td4mwvsbkqmogkmkm4fh2djhdyvu75db5mmhlum4j66jina5y");
