@@ -15,6 +15,8 @@ export async function loadWACZ(ipfs, cid) {
 
   await pipeline(catiter, file);
 
+  console.log(`Fetched ${cid}/webarchive.wacz`);
+
   let text;
 
   try {

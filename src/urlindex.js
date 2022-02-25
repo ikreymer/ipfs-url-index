@@ -24,6 +24,18 @@ export class URLIndex {
     this.btreeOpts = { get, compare, cache, chunker, codec, hasher };
   }
 
+  _setRoot(root) {
+    if (this.root && this.storage.ipfs) {
+      this.storage.ipfs.pin.rm(this.root.block.cid);
+    }
+
+    this.root = root;
+
+    if (this.root && this.storage.ipfs) {
+      this.storage.ipfs.pin.add(this.root.block.cid);
+    }
+  }
+
   get rootCid() {
     return this.root ? this.root.block.cid : null;
   }
@@ -36,12 +48,13 @@ export class URLIndex {
   async _createTree(list) {
     for await (const node of BTreeMap.create({ list, ...this.btreeOpts })) {
       await this.storage.put(await node.block);
-      this.root = node;
+      this._setRoot(node);
     }
   }
 
   async loadExisting(cid) {
-    this.root = await BTreeMap.load({ cid, ...this.btreeOpts });
+    const root = await BTreeMap.load({ cid, ...this.btreeOpts });
+    this._setRoot(root);
   }
 
   async add({ url, ts, cid, title = "" } = {}) {
@@ -69,7 +82,7 @@ export class URLIndex {
   async _insertTree(bulk) {
     const newtree = await this.root.bulk(bulk);
     await Promise.all(newtree.blocks.map((block) => this.storage.put(block)));
-    this.root = newtree.root;
+    this._setRoot(newtree.root);
   }
 
   prefixUpperBound(url) {
